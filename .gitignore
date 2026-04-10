@@ -10,6 +10,12 @@
 *.userosscache
 *.sln.docstates
 
+#---------------
+# Crude
+#---------------
+compare.bat
+crude.bat
+
 # -----------------------------
 # Build output
 # -----------------------------

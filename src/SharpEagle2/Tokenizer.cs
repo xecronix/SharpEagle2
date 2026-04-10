@@ -9,10 +9,10 @@ namespace SharpEagle2
 {
     public class Tokenizer
     {
-        private List<Token> _stack = new List<Token>();
+        private readonly List<Token> _stack = new List<Token>();
         
         private int StackLen => _stack.Count;
-        List<Token> _tokens = new List<Token>();
+        private readonly List<Token> _tokens = new List<Token>();
         private int _lineNum = 0;
         private int _colNum = 0;    
 
@@ -49,7 +49,7 @@ namespace SharpEagle2
 
         private void ConsumeWhiteSpace(Cursor<char> template)
         {
-            while (true)
+            do
             {
                 char c = Current(template);
                 if (!char.IsWhiteSpace(c))
@@ -57,8 +57,7 @@ namespace SharpEagle2
                     _colNum--;
                     break;
                 }
-                if (!template.Next()) { break; }
-            }
+            } while (template.Next());
         }
 
         private Token MakeKeyToken(Cursor<char> template) 
@@ -69,18 +68,12 @@ namespace SharpEagle2
             // create a token to return
             Token retval = new Token(TokenType.Key, "", _lineNum, _colNum);
             // build key until peek == : or peek == whitespace
-            while (true)
+            do
             {
                 char c = Current(template);
-                char p;
-                bool didPeek = template.TryPeek(out p);
-                if (didPeek)
-                {
-                    if (char.IsWhiteSpace(c) || c == ':') { break;}
-                }
+                if (char.IsWhiteSpace(c) || c == ':') { break; }
                 retval.Str += c;
-                if (!template.Next()) { break; }
-            }
+            } while (template.Next());
             return retval;
         }
 
@@ -135,7 +128,7 @@ namespace SharpEagle2
             Token txt = new Token(TokenType.Text, "", _lineNum, _colNum);
 
             // start looping over chars
-            while (true)
+            do
             {
                 char c = Current(template);
                 char p;
@@ -149,13 +142,13 @@ namespace SharpEagle2
                     }
 
                     template.Next(); // move to the =
-                    Current(template) ;
+                    Current(template);
                     if (template.Next()) // consume the =
                     {
                         Current(template);
                         SubstitutionTagOpen(template);
                     }
-                    else throw new Exception($"Unexpected end of data found: line:[{_lineNum}] column:[{_colNum}]");
+                    else { throw new Exception($"Unexpected end of data found: line:[{_lineNum}] column:[{_colNum}]"); }
                     txt = new Token(TokenType.Text, "", _lineNum, _colNum);
                 }
 
@@ -167,7 +160,7 @@ namespace SharpEagle2
                         _tokens.Add(txt);
                     }
 
-                    
+
                     template.Next(); // move to the @
                     Current(template);
                     if (template.Next()) // consume the @
@@ -175,7 +168,7 @@ namespace SharpEagle2
                         Current(template);
                         ActionTagOpen(template);
                     }
-                    else throw new Exception($"Unexpected end of data found: line:[{_lineNum}] column:[{_colNum}]");
+                    else { throw new Exception($"Unexpected end of data found: line:[{_lineNum}] column:[{_colNum}]"); }
                     txt = new Token(TokenType.Text, "", _lineNum, _colNum);
                 }
 
@@ -191,13 +184,12 @@ namespace SharpEagle2
                     template.Next();
                     Current(template);
                     txt = new Token(TokenType.Text, "", _lineNum, _colNum);
-                    
+
                 }
 
                 // else just some data add it to the text token.
                 else { txt.Str += c; }
-                if (!template.Next()) { break;  }
-            }
+            } while (template.Next());
 
             if (StackLen > 0) 
             {

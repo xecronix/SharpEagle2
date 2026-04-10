@@ -7,7 +7,7 @@ using XecronixCursor;
 
 namespace BzTests
 {
-    internal class ParserTest
+    internal static class ParserTest
     {
         private static bool ExpectEqual(string expected, string actual, string label)
         {
@@ -40,7 +40,7 @@ namespace BzTests
 
         private static bool Test_Parse_ReturnsInputTemplate_ForCurrentSkeleton()
         {
-            string template = "abc";
+            const string template = "abc";
             var context = new Dictionary<string, string>();
 
             var engine = new TemplateEngine();
@@ -76,7 +76,7 @@ namespace BzTests
 
         private static bool Test_Parse_ReplacesSimpleVariable()
         {
-            string template = "Hi {=name:}.";
+            const string template = "Hi {=name:}.";
             var context = new Dictionary<string, string>
             {
                 ["name"] = "Ronald"
@@ -90,7 +90,7 @@ namespace BzTests
 
         private static bool Test_Parse_MissingSubstitutionTag()
         {
-            string template = "Hi {=name:}.";
+            const string template = "Hi {=name:}.";
             var context = new Dictionary<string, string>
             {
                 ["notname"] = "Ronald"
@@ -104,7 +104,7 @@ namespace BzTests
 
         private static bool Test_Parse_MissingActionTagNoSubtemplate()
         {
-            string template = "{@days:}.";
+            const string template = "{@days:}.";
             var context = new Dictionary<string, string>();
 
             var engine = new TemplateEngine();
@@ -115,7 +115,7 @@ namespace BzTests
 
         private static bool Test_Parse_MissingActionTagWithSubtemplate()
         {
-            string template = "{@days Phone rang  :}.";
+            const string template = "{@days Phone rang  :}.";
             var context = new Dictionary<string, string>();
 
             var engine = new TemplateEngine();
@@ -127,7 +127,7 @@ namespace BzTests
         private static bool Test_Parse_NestedSubTemplateAction() 
         {
             bool success = false;
-            string template =
+            const string template =
  @"{@nested {=title:}{@demographics
 Name      {=Name:}
 Country   {=Country:}
@@ -157,7 +157,7 @@ Christian {=Christian:}:}:}";
         private static bool Test_Parse_ReuseParserAction()
         {
             bool success = false;
-            string template =
+            const string template =
  @"{@nested {=title:}{@demographics
 Name      {=Name:}
 Country   {=Country:}
@@ -189,7 +189,7 @@ Christian {=Christian:}:}:}";
         private static bool Test_Parse_LoopingAction()
         {
             bool success = false;
-            string template =
+            const string template =
  @"{@week day {=day:}
 :}";
 
@@ -212,20 +212,18 @@ Christian {=Christian:}:}:}";
         }
     }
 
-    public class ReuseParserDemographicsAction : ITemplateAction
+    public class ReuseParserDemographicsAction(TemplateEngine eagle) : ITemplateAction
     {
-        TemplateEngine Eagle;
-        public ReuseParserDemographicsAction(TemplateEngine eagle) 
-        {
-            Eagle = eagle;
-        }
+        private readonly TemplateEngine Eagle = eagle;
 
         public string Run(Cursor<Token> tokens, IReadOnlyDictionary<string, string> context)
         {
-            Dictionary<string, string> newTags = new Dictionary<string, string>();
-            newTags.Add("Name", "Xecronix");
-            newTags.Add("Country", "Unknown");
-            newTags.Add("Christian", "Yes");
+            Dictionary<string, string> newTags = new Dictionary<string, string>
+            {
+                { "Name", "Xecronix" },
+                { "Country", "Unknown" },
+                { "Christian", "Yes" }
+            };
             string retval = Eagle.ParseTokens(tokens, newTags);
             return retval;
         }
@@ -233,7 +231,7 @@ Christian {=Christian:}:}:}";
 
     public class ReuseParserNestedAction : ITemplateAction
     {
-        TemplateEngine Eagle;
+        private readonly TemplateEngine Eagle;
         public ReuseParserNestedAction(TemplateEngine eagle)
         {
             Eagle = eagle;
@@ -241,8 +239,10 @@ Christian {=Christian:}:}:}";
 
         public string Run(Cursor<Token> tokens, IReadOnlyDictionary<string, string> context)
         {
-            Dictionary<string, string> newTags = new Dictionary<string, string>();
-            newTags.Add("title", "Nested Test");
+            Dictionary<string, string> newTags = new Dictionary<string, string>
+            {
+                { "title", "Nested Test" }
+            };
             string retval = Eagle.ParseTokens(tokens, newTags);
             return retval;
         }
@@ -253,10 +253,12 @@ Christian {=Christian:}:}:}";
         public string Run(Cursor<Token> tokens, IReadOnlyDictionary<string, string> context)
         {
             var eagle = new TemplateEngine();
-            Dictionary<string, string> newTags = new Dictionary<string, string>();
-            newTags.Add("Name", "Xecronix");
-            newTags.Add("Country", "Unknown");
-            newTags.Add("Christian", "Yes");
+            Dictionary<string, string> newTags = new Dictionary<string, string>
+            {
+                { "Name", "Xecronix" },
+                { "Country", "Unknown" },
+                { "Christian", "Yes" }
+            };
             string retval = eagle.ParseTokens(tokens, newTags);
             return retval;
         }
@@ -268,8 +270,10 @@ Christian {=Christian:}:}:}";
         {
             var eagle = new TemplateEngine();
             eagle.AddAction("demographics", new DemographicsAction());
-            Dictionary<string, string> newTags = new Dictionary<string, string>();
-            newTags.Add("title", "Nested Test");
+            Dictionary<string, string> newTags = new Dictionary<string, string>
+            {
+                { "title", "Nested Test" }
+            };
             string retval = eagle.ParseTokens(tokens, newTags);
             return retval;
         }
@@ -285,8 +289,10 @@ Christian {=Christian:}:}:}";
             foreach (var day in days)
             {
                 tokens.Rewind();
-                Dictionary<string, string> newTags = new Dictionary<string, string>();
-                newTags.Add ("day", day);
+                Dictionary<string, string> newTags = new Dictionary<string, string>
+                {
+                    { "day", day }
+                };
                 retval += eagle.ParseTokens(tokens, newTags);
             }
             return retval;

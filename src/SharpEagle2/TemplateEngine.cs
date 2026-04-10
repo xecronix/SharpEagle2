@@ -6,11 +6,11 @@ namespace SharpEagle2;
 public sealed class TemplateEngine
 {
 
-    private Dictionary<string, ITemplateAction> TemplateActions = new Dictionary<string, ITemplateAction>();
+    private readonly Dictionary<string, ITemplateAction> TemplateActions = new Dictionary<string, ITemplateAction>();
 
     public void AddAction(string key, ITemplateAction action) { TemplateActions.Add(key, action); }
 
-    private bool SubstitutionTag(Cursor<Token> tokens, IReadOnlyDictionary<string, string> context, out string retval)
+    private static bool SubstitutionTag(Cursor<Token> tokens, IReadOnlyDictionary<string, string> context, out string retval)
     {
         Token c = tokens.Current;
         Token? p = null;
@@ -54,7 +54,7 @@ public sealed class TemplateEngine
         return success;
     }
 
-    private bool MakeSubTemplate(Cursor<Token> tokens, out Cursor<Token> retval)
+    private static bool MakeSubTemplate(Cursor<Token> tokens, out Cursor<Token> retval)
     {
         retval = default!;
         List<Token> subTokens = new List<Token>();
@@ -70,16 +70,16 @@ public sealed class TemplateEngine
             {
                 nestLevel--;
             }
-            if (nestLevel == 0) { break; } // break and don't move the cursor.  don't add the close tag
+            if (nestLevel == 0) { break; } // break and don't move the cursor.  don't add the close tag to tokens
             subTokens.Add(c);
             if (!tokens.Next()) { break; }
         }
 
         if (subTokens.Count > 0)
-        { 
-            retval = new Cursor<Token>(subTokens); 
+        {
+            retval = new Cursor<Token>(subTokens);
         }
-        
+
         return subTokens.Count > 0;
     }
 
@@ -90,16 +90,16 @@ public sealed class TemplateEngine
         Token c = tokens.Current;
         Token? p = null;
         bool didPeek = tokens.TryPeek(out p);
-        
+
         // let's first make sure the cursor is sane
         if (c.Type != TokenType.OpenAction) { throw new Exception($"Wrong token type for open token [{c.Type}]. Line: [{c.LineNumber}] Column [{c.ColumnNumber}]"); }
-        if (!didPeek) { throw new Exception($"Ran out of looking for action key. Line: [{p.LineNumber}] Column [{p.ColumnNumber}]"); };
+        if (!didPeek) { throw new Exception($"Ran out of looking for action key. Line: [{p.LineNumber}] Column [{p.ColumnNumber}]"); }
         if (p.Type != TokenType.Key) { throw new Exception($"Wrong token type for key token [{p.Type}]. Line: [{p.LineNumber}] Column [{p.ColumnNumber}]"); }
 
         tokens.Next();
         if (!tokens.Next())
         {
-             throw new Exception($"Ran out of tokens before building subtemplate. Line: [{p.LineNumber}] Column [{p.ColumnNumber}]"); 
+             throw new Exception($"Ran out of tokens before building subtemplate. Line: [{p.LineNumber}] Column [{p.ColumnNumber}]");
         }
 
         bool actionExists = TemplateActions.ContainsKey(p.Str);
@@ -126,7 +126,7 @@ public sealed class TemplateEngine
         }
 
         // action tag does exist in the TemplateActions dictionary 
-        else 
+        else
         {
             // call the action
             ITemplateAction action = TemplateActions[p.Str];
@@ -158,17 +158,15 @@ public sealed class TemplateEngine
 
         string retval="";
 
-        while (true)
-        { 
+        do
+        {
             Token c = tokens.Current;
-            Token? p = null;
-            bool didPeek = tokens.TryPeek(out p);
 
             if (c.Type == TokenType.Text) { retval += c.Str; }
             else if (c.Type == TokenType.OpenSubstitution)
             {
                 string txt = "";
-                if (SubstitutionTag(tokens, context, out txt)) 
+                if (SubstitutionTag(tokens, context, out txt))
                 {
                     retval += txt;
                 }
@@ -181,8 +179,7 @@ public sealed class TemplateEngine
                     retval += txt;
                 }
             }
-            if (!tokens.Next()) { break; }
-        }
+        } while (tokens.Next());
         return retval;
     }
     public string Parse(string template, IReadOnlyDictionary<string, string> context)
@@ -194,12 +191,11 @@ public sealed class TemplateEngine
         {
             return string.Empty;
         }
-        string retval = string.Empty;
+
         Cursor<char> csr = new Cursor<char>(template.ToCharArray());
         Tokenizer t = new Tokenizer();
         List<Token> tkns = t.MakeTokens(csr);
         Cursor<Token> tokens = new Cursor<Token>(tkns);
-        retval = ParseTokens(tokens, context);
-        return retval;
+        return ParseTokens(tokens, context);
     }
 }

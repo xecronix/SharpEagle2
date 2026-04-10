@@ -8,7 +8,7 @@ using XecronixCursor;
 
 namespace BzTests
 {
-    internal class TokenizerTest
+    internal static class TokenizerTest
     {
         private static List<Token> MakeTokens(string template)
         {
@@ -68,7 +68,7 @@ namespace BzTests
         private static bool Test_SingleToken()
         {
             //string template = "This is a template.";
-            string template = "abc";
+            const string template = "abc";
             List<Token> tokens = MakeTokens(template);
             if (tokens.Count != 1) { return false; }
             if (tokens[0].Str != template) { return false; }
@@ -80,7 +80,7 @@ namespace BzTests
         private static bool Test_SingleSubstitutionTag()
         {
             //string template = "This is a template.";
-            string template = "abc {=name:}";
+            const string template = "abc {=name:}";
             List<Token> tokens = MakeTokens(template);
             if (tokens.Count == 4)
             {
@@ -98,7 +98,7 @@ namespace BzTests
 
                 if (tokens[2].Str != "name")
                 {
-                    BzEmitter.WriteLine($"Token.Str != name");
+                    BzEmitter.WriteLine($"Token.Str != name : Actual[{tokens[2].Str}]");
                     return false;
                 }
 
@@ -120,7 +120,7 @@ namespace BzTests
         private static bool Test_SingleActionTag()
         {
             //string template = "This is a template.";
-            string template = "def {@items:}";
+            const string template = "def {@items:}";
             List<Token> tokens = MakeTokens(template);
 
             if (tokens.Count != 4)
@@ -143,7 +143,7 @@ namespace BzTests
 
             if (tokens[2].Str != "items")
             {
-                BzEmitter.WriteLine($"Token.Str != items");
+                BzEmitter.WriteLine($"Token.Str != items : Actual [{tokens[2].Str}]");
                 return false;
             }
 
@@ -158,7 +158,7 @@ namespace BzTests
 
         private static bool Test_MultiActionTag()
         {
-            string template = "Month {@week day[{@day:}]:}";
+            const string template = "Month {@week day[{@day:}]:}";
             List<Token> tokens = MakeTokens(template);
 
             if (tokens.Count != 9)
@@ -256,7 +256,7 @@ namespace BzTests
 
         private static bool Test_ActionAndSubstitutionTag()
         {
-            string template = "Books {@chapter page[{=pg:}]:}";
+            const string template = "Books {@chapter page[{=pg:}]:}";
             List<Token> tokens = MakeTokens(template);
 
             if (tokens.Count != 9)
@@ -354,7 +354,7 @@ namespace BzTests
     
         private static bool Test_LeadingSubstitutionTag()
         {
-            string template = "{=name:} rocks";
+            const string template = "{=name:} rocks";
             List<Token> tokens = MakeTokens(template);
 
             if (!ExpectTokenCount(tokens, 4)) { return false; }
@@ -368,7 +368,7 @@ namespace BzTests
 
         private static bool Test_TrailingSubstitutionTag()
         {
-            string template = "Hi {=name:}";
+            const string template = "Hi {=name:}";
             List<Token> tokens = MakeTokens(template);
 
             if (!ExpectTokenCount(tokens, 4)) { return false; }
@@ -382,7 +382,7 @@ namespace BzTests
 
         private static bool Test_AdjacentSubstitutionTags()
         {
-            string template = "{=a:}{=b:}";
+            const string template = "{=a:}{=b:}";
             List<Token> tokens = MakeTokens(template);
 
             if (!ExpectTokenCount(tokens, 6)) { return false; }
@@ -398,7 +398,7 @@ namespace BzTests
 
         private static bool Test_MultipleSiblingSubstitutionTags()
         {
-            string template = "A {=x:} B {=y:} C";
+            const string template = "A {=x:} B {=y:} C";
             List<Token> tokens = MakeTokens(template);
 
             if (!ExpectTokenCount(tokens, 9)) { return false; }
@@ -417,7 +417,7 @@ namespace BzTests
 
         private static bool Test_ActionWithTextBody()
         {
-            string template = "List {@items value:}";
+            const string template = "List {@items value:}";
             List<Token> tokens = MakeTokens(template);
 
             if (!ExpectTokenCount(tokens, 5)) { return false; }
@@ -432,7 +432,7 @@ namespace BzTests
 
         private static bool Test_WhitespaceInsideSubstitutionTag()
         {
-            string template = "X {=   name   :}";
+            const string template = "X {=   name   :}";
             List<Token> tokens = MakeTokens(template);
 
             if (!ExpectTokenCount(tokens, 4)) { return false; }
@@ -446,7 +446,7 @@ namespace BzTests
 
         private static bool Test_WhitespaceInsideActionWithNestedSubstitution()
         {
-            string template = "Books {@chapter   page[{=  pg   :}]   :}";
+            const string template = "Books {@chapter   page[{=  pg   :}]   :}";
             List<Token> tokens = MakeTokens(template);
 
             if (!ExpectTokenCount(tokens, 9)) { return false; }
@@ -465,31 +465,31 @@ namespace BzTests
 
         private static bool Test_StrayCloseTag_Throws()
         {
-            string template = "abc :}";
+            const string template = "abc :}";
             return ExpectThrows(template);
         }
 
         private static bool Test_UnclosedActionTag_Throws()
         {
-            string template = "abc {@items value";
+            const string template = "abc {@items value";
             return ExpectThrows(template);
         }
 
         private static bool Test_UnclosedSubstitutionTag_Throws()
         {
-            string template = "abc {=name";
+            const string template = "abc {=name";
             return ExpectThrows(template);
         }
 
         private static bool Test_IncompleteActionOpenAtEnd_Throws()
         {
-            string template = "abc {@";
+            const string template = "abc {@";
             return ExpectThrows(template);
         }
 
         private static bool Test_IncompleteSubstitutionOpenAtEnd_Throws()
         {
-            string template = "abc {=";
+            const string template = "abc {=";
             return ExpectThrows(template);
         }
     } 
