@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SharpEagle2/SharpEagle2.csproj" />
+  </Folder>
+  <Project Path="BzTests/BzTests.csproj" Id="46468041-b0e0-42d4-a064-b310c4956f61" />
+</Solution>
