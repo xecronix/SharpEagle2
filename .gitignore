@@ -1,0 +1,71 @@
+# File: .gitignore
+
+# -----------------------------
+# Visual Studio
+# -----------------------------
+.vs/
+*.user
+*.rsuser
+*.suo
+*.userosscache
+*.sln.docstates
+
+# -----------------------------
+# Build output
+# -----------------------------
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# -----------------------------
+# Test output
+# -----------------------------
+[Tt]est[Rr]esult*/
+BenchmarkDotNet.Artifacts/
+
+# -----------------------------
+# Rider / ReSharper
+# -----------------------------
+.idea/
+_ReSharper*/
+*.DotSettings.user
+
+# -----------------------------
+# VS Code
+# -----------------------------
+.vscode/
+
+# -----------------------------
+# NuGet / package artifacts
+# -----------------------------
+*.nupkg
+*.snupkg
+packages/
+
+# -----------------------------
+# Publish output
+# -----------------------------
+publish/
+artifacts/
+
+# -----------------------------
+# Local database / cache files
+# -----------------------------
+*.db
+*.db-shm
+*.db-wal
+*.cache
+
+# -----------------------------
+# OS junk
+# -----------------------------
+.DS_Store
+Thumbs.db
+
+# -----------------------------
+# Generated logs and temp files
+# -----------------------------
+*.log
+*.tmp
+*.temp
