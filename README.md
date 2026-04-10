@@ -1,27 +1,38 @@
-
 # SharpEagle2
 
-SharpEagle2 is a lightweight C# template engine inspired by the MightEagle Template System.
+SharpEagle2 is a small C# template engine.
 
-It supports:
+The goal is not to build the biggest template language in the world.
+The goal is to build one that is simple, useful, and easier to debug
+than the first version.
 
-- plain text passthrough
-- simple substitution tags
-- action tags with subtemplates
+SharpEagle2 exists because the original SharpEagle idea still made
+sense, but I wanted tokens this time.
+
+Why?
+
+Because tokens give me better structure, better nesting behavior, and
+much better error messages. If something goes wrong, line and column
+matter.
+
+That was one of the main reasons for doing version 2.
+
+## What it does
+
+SharpEagle2 currently supports:
+
+- plain text
+- substitution tags
+- action tags
 - nested action tags
-- token-based parsing with line/column metadata for better diagnostics
+- custom callbacks
+- token-based parsing with line/column tracking
 
-The project is still early, but the core parser, tokenizer, and callback model are in place and test-backed.
+It is small on purpose.
 
-## Why SharpEagle2?
+## Template syntax
 
-SharpEagle2 exists to keep the original SharpEagle idea simple while improving one major area: diagnostics.
-
-The earlier approach worked, but tokenizing first gives the engine much better opportunities to report where problems occurred. Each token carries line and column information, which makes malformed template errors much easier to track down.
-
-## Current Template Syntax
-
-### Substitution tag
+### Substitution tags
 
 A substitution tag looks like this:
 
@@ -29,18 +40,33 @@ A substitution tag looks like this:
 {=name:}
 ````
 
-If the key exists in the context dictionary, the value is inserted.
+If `"name"` exists in the context dictionary, it gets replaced.
 
 Example:
 
 ```txt
-Template: Hi {=name:}.
-Output:   Hi Ronald.
+Hi {=name:}.
 ```
 
-If the key does not exist, the tag is preserved as-is.
+with:
 
-### Action tag
+```csharp
+["name"] = "Ronald"
+```
+
+becomes:
+
+```txt
+Hi Ronald.
+```
+
+If the key does not exist, the tag is left alone.
+
+That is intentional.
+
+I would rather preserve the original text than silently break it.
+
+### Action tags
 
 An action tag looks like this:
 
@@ -58,94 +84,73 @@ Christian {=Christian:}
 :}
 ```
 
-The action name is read after `{@` and continues until whitespace or `:`.
+The action name is looked up in the action dictionary.  
+If the action exists, SharpEagle2 gives it the subtemplate and lets it  
+return whatever string it wants.
 
-Everything between the action name and the matching `:}` becomes the action's subtemplate.
+If the action does not exist, the original tag is preserved.
 
-### Nested action tags
+Again, that is intentional.
 
-Action tags can be nested.
+## Why version 2 exists
 
-Example:
+SharpEagle 1 worked, but it was string-oriented.
 
-```txt
-{@outer Before {@inner {=value:}:} After :}
-```
+SharpEagle2 keeps the same spirit, but it moves the parser to tokens so  
+I can do a better job with:
 
-SharpEagle2 tracks nested action depth so inner `:}` pairs do not accidentally terminate the outer action.
-
-## Core Concepts
-
-### 1. TemplateEngine
-
-`TemplateEngine` is the main entry point.
-
-It currently exposes:
-
-- `AddAction(string key, ITemplateAction action)`
+- nesting
     
-- `Parse(string template, IReadOnlyDictionary<string, string> context)`
+- malformed input
     
-- `ParseTokens(Cursor<Token> tokens, IReadOnlyDictionary<string, string> context)`
+- line/column error reporting
+    
+- parser sanity checks
     
 
-In normal use, call `Parse(...)`.
+That was the mission from the start.
 
-`ParseTokens(...)` is useful for advanced scenarios, especially from inside actions.
+## Core ideas
 
-### 2. Tokenizer
+### 1. Plain text should stay plain text
 
-The tokenizer converts the raw template text into tokens such as:
+If the input is just text, the engine should return it.
 
-- `Text`
+No surprises.
+
+### 2. Missing data should fail gently
+
+If a substitution key is missing, keep the original tag.
+
+If an action is missing, keep the original action text.
+
+That gives the template author a fighting chance to see what happened  
+instead of wondering where the content went.
+
+### 3. Actions return strings
+
+A custom action gets a subtemplate cursor and a context dictionary.  
+It returns a string.
+
+That string might come from:
+
+- reparsing the subtemplate
     
-- `OpenSubstitution`
+- building a new context
     
-- `CloseSubstitution`
+- looking up more data
     
-- `OpenAction`
+- combining several passes
     
-- `CloseAction`
-    
-- `Key`
-    
-
-Each token includes:
-
-- token text
-    
-- token type
-    
-- line number
-    
-- column number
-    
-
-That metadata is one of the main reasons SharpEagle2 exists.
-
-### 3. ITemplateAction
-
-Custom behavior is added by implementing `ITemplateAction`.
-
-Current interface:
-
-```csharp
-public interface ITemplateAction
-{
-    string Run(Cursor<Token> tokens, IReadOnlyDictionary<string, string> context);
-}
-```
-
-An action receives:
-
-- a cursor over the action's subtemplate tokens
-    
-- the current context dictionary
+- ignoring the subtemplate entirely
     
 
-The action returns the replacement text that should be inserted into the output.
+That is up to the action.
 
-## Basic Usage
+The parser's job is to stay safe.  
+The callback's job is to return text.
+
+## Basic usage
 
 ### Simple substitution
 
@@ -165,9 +170,7 @@ string result = engine.Parse("Hi {=name:}.", context);
 // result == "Hi Ronald."
 ```
 
-### Missing key behavior
-
-If a substitution key is missing, SharpEagle2 keeps the original tag:
+### Missing substitution key
 
 ```csharp
 var engine = new TemplateEngine();
@@ -182,9 +185,7 @@ string result = engine.Parse("Hi {=name:}.", context);
 // result == "Hi {=name:}."
 ```
 
-### Missing action behavior
-
-If an action is not registered, SharpEagle2 keeps the original action tag text:
+### Missing action
 
 ```csharp
 var engine = new TemplateEngine();
@@ -195,9 +196,20 @@ string result = engine.Parse("{@days Phone rang  :}.", context);
 // result == "{@days Phone rang  :}."
 ```
 
-## Writing a Custom Action
+## Writing an action
 
-Here is a simple action that fills in a subtemplate with demographic values:
+Custom behavior is added through `ITemplateAction`.
+
+Current shape:
+
+```csharp
+public interface ITemplateAction
+{
+    string Run(Cursor<Token> tokens, IReadOnlyDictionary<string, string> context);
+}
+```
+
+Here is a simple example:
 
 ```csharp
 using SharpEagle2;
@@ -208,7 +220,7 @@ public class DemographicsAction : ITemplateAction
 {
     public string Run(Cursor<Token> tokens, IReadOnlyDictionary<string, string> context)
     {
-        var engine = new TemplateEngine();
+        var eagle = new TemplateEngine();
 
         var newTags = new Dictionary<string, string>
         {
@@ -217,136 +229,163 @@ public class DemographicsAction : ITemplateAction
             ["Christian"] = "Yes"
         };
 
-        return engine.ParseTokens(tokens, newTags);
+        return eagle.ParseTokens(tokens, newTags);
     }
 }
 ```
 
-Register it like this:
+Then register it:
 
 ```csharp
 var engine = new TemplateEngine();
 engine.AddAction("demographics", new DemographicsAction());
-
-string template =
-@"{@demographics
-Name      {=Name:}
-Country   {=Country:}
-Christian {=Christian:}
-:}";
-
-string result = engine.Parse(template, new Dictionary<string, string>());
 ```
 
-Expected output:
+## Nested actions
 
-```txt
-Name      Xecronix
-Country   Unknown
-Christian Yes
-```
+Nested actions are supported.
 
-## Nested Action Example
+That matters because one action often needs to render a subtemplate that  
+contains more actions inside it.
 
-You can compose actions by letting one action parse a subtemplate that contains another action.
+Example idea:
+
+- outer action sets up some context
+    
+- inner action fills in more detail
+    
+- parser handles nesting correctly
+    
+
+That pattern is already part of the tested behavior.
+
+## Looping actions
+
+Looping works too.
+
+One thing that came up naturally during development was the need to  
+rewind the subtemplate cursor for repeated passes.
+
+That is why `Cursor<T>` now has:
+
+- `Rewind()`
+    
+- `FreshCopy()`
+    
+
+That turned out to matter for actions like:
+
+- loop through days of the week
+    
+- render the same subtemplate multiple times
+    
+- keep parser code simple instead of fighting cursor state
+    
+
+## Context in real use
+
+In real life I use context for 2 things:
+
+1. substitution values
+    
+2. data needed to look up more data
+    
+
+That second use might sound a little hacky at first, but honestly it is  
+pretty normal.
+
+A lot of the time, the outer template already has the exact values I  
+need to derive the inner context. So I do not see that as abuse of the  
+system. I see it as practical.
+
+## What this project is not trying to be
+
+SharpEagle2 is not trying to compete with giant template engines.
+
+It is not trying to become a kitchen sink.
+
+It is trying to stay:
+
+- readable
+    
+- small
+    
+- debuggable
+    
+- useful as a library
+    
+- flexible enough for callback-driven rendering
+    
+
+That is the lane.
+
+## Error handling
+
+This version is token-based for a reason.
+
+Tokens carry line and column information, which means parser errors can  
+be much more useful than "something went wrong somewhere."
+
+That was one of the biggest reasons to build SharpEagle2 instead of just  
+keeping the old version as-is.
+
+## Current status
+
+As of the current test-backed state, SharpEagle2 has working support for:
+
+- empty template handling
+    
+- null argument guards
+    
+- simple substitutions
+    
+- missing substitutions
+    
+- missing actions
+    
+- nested action/subtemplate parsing
+    
+- tokenizer error cases
+    
+- callback-based rendering
+    
+- looping callbacks
+    
+
+That is enough to call it real.
+
+## Example
 
 ```csharp
-public class NestedAction : ITemplateAction
+using SharpEagle2;
+using System.Collections.Generic;
+using XecronixCursor;
+
+public class HelloAction : ITemplateAction
 {
     public string Run(Cursor<Token> tokens, IReadOnlyDictionary<string, string> context)
     {
-        var engine = new TemplateEngine();
-        engine.AddAction("demographics", new DemographicsAction());
+        var eagle = new TemplateEngine();
 
         var newTags = new Dictionary<string, string>
         {
-            ["title"] = "Nested Test"
+            ["name"] = "Ronald"
         };
 
-        return engine.ParseTokens(tokens, newTags);
+        return eagle.ParseTokens(tokens, newTags);
     }
 }
-```
 
-Registration:
-
-```csharp
 var engine = new TemplateEngine();
-engine.AddAction("nested", new NestedAction());
+engine.AddAction("hello", new HelloAction());
 
-string template =
-@"{@nested {=title:}{@demographics
-Name      {=Name:}
-Country   {=Country:}
-Christian {=Christian:}
-:}:}";
-
+string template = @"{@hello Hello {=name:}! :}";
 string result = engine.Parse(template, new Dictionary<string, string>());
+
+// result == "Hello Ronald! "
 ```
 
-This pattern lets actions act like mini render pipelines.
-
-## Design Notes
-
-### Context has two practical jobs
-
-In real use, the context dictionary often serves two purposes:
-
-1. values for direct substitution tags
-    
-2. values needed to derive a new inner context
-    
-
-That second use is normal. Often the outer template already contains the keys needed to fetch or build the inner template data.
-
-### Actions return strings
-
-Actions are intentionally flexible. The engine provides a subtemplate cursor and a context dictionary, but the action is free to return its output however it wants.
-
-That means an action can:
-
-- ignore the incoming context
-    
-- build a new context
-    
-- call back into `ParseTokens(...)`
-    
-- create nested pipelines
-    
-- derive output by any other means
-    
-
-The parser's responsibility is to stay safe and deterministic. The action's responsibility is to return replacement text.
-
-### Unknown tags are preserved
-
-This is an important behavior in the current implementation:
-
-- missing substitution keys are preserved as original text
-    
-- missing action handlers are preserved as original text
-    
-
-That makes the engine safer to use while templates are still evolving.
-
-## Error Handling
-
-SharpEagle2 currently throws exceptions when it encounters malformed structures such as:
-
-- invalid substitution tag structure
-    
-- unexpected end of data
-    
-- closing action tags without matching open tags
-    
-- unclosed action tags
-    
-- parser/token expectation mismatches
-    
-
-Because tokens track line and column values, these errors can point back to the original template more precisely than a plain string-only parser.
-
-## Project Layout
+## Project layout
 
 ```txt
 SharpEagle2/
@@ -364,84 +403,16 @@ SharpEagle2/
 \- SharpEagle2.slnx
 ```
 
-## Build Notes
+## Final note
 
-The project currently targets:
+SharpEagle2 is not trying to be fancy.
 
-```txt
-net10.0
-```
+It is trying to be solid.
 
-It also references `XecronixCursor` through a relative path in the project file, so make sure that dependency exists where the solution expects it.
+The whole point is to keep the template idea simple, keep the parser  
+safe, and make failures easier to understand when they happen.
 
-## Status
-
-Current status, at a high level:
-
-- tokenizer exists
-    
-- token model exists
-    
-- parser exists
-    
-- substitution tags work
-    
-- action tags work
-    
-- nested action tags work
-    
-- public callback model works
-    
-- test coverage exists for core parsing behavior
-    
-
-The engine is already useful for experimentation and small template workflows, but the public API may continue to evolve as the project matures.
-
-## Goals
-
-Likely goals for SharpEagle2 include:
-
-- keep the template language small and readable
-    
-- improve parser diagnostics
-    
-- preserve nested template power
-    
-- support reusable callback-based rendering
-    
-- stay easy to embed into other C# projects
-    
-
-## Example End-to-End
-
-```csharp
-using SharpEagle2;
-using System.Collections.Generic;
-using XecronixCursor;
-
-public class HelloAction : ITemplateAction
-{
-    public string Run(Cursor<Token> tokens, IReadOnlyDictionary<string, string> context)
-    {
-        var engine = new TemplateEngine();
-
-        var newTags = new Dictionary<string, string>
-        {
-            ["name"] = "Ronald"
-        };
-
-        return engine.ParseTokens(tokens, newTags);
-    }
-}
-
-var engine = new TemplateEngine();
-engine.AddAction("hello", new HelloAction());
-
-string template = @"{@hello Hello {=name:}! :}";
-string result = engine.Parse(template, new Dictionary<string, string>());
-
-// result == "Hello Ronald! "
-```
+That is enough.
 
 ## License
 
