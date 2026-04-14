@@ -210,6 +210,31 @@ Christian {=Christian:}:}:}";
             }
             return success;
         }
+
+        private static bool Test_Parse_PreservesTextAfterSelfClosingAction()
+        {
+            const string template = "{@emit:} {=name:}";
+            var context = new Dictionary<string, string>
+            {
+                ["name"] = "contacts"
+            };
+
+            var engine = new TemplateEngine();
+            engine.AddAction("emit", new EmitAction("CREATE TABLE"));
+            string result = engine.Parse(template, context);
+
+            return ExpectEqual("CREATE TABLE contacts", result, "result");
+        }
+    }
+
+    public class EmitAction(string value) : ITemplateAction
+    {
+        private readonly string Value = value;
+
+        public string Run(Cursor<Token> tokens, IReadOnlyDictionary<string, string> context)
+        {
+            return Value;
+        }
     }
 
     public class ReuseParserDemographicsAction(TemplateEngine eagle) : ITemplateAction

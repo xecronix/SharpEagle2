@@ -3,4 +3,5 @@
     <Project Path="src/SharpEagle2/SharpEagle2.csproj" />
   </Folder>
   <Project Path="BzTests/BzTests.csproj" Id="46468041-b0e0-42d4-a064-b310c4956f61" />
+  <Project Path="Demo_SQLiteExporter/Demo_SQLiteExporter.csproj" Id="c3ccbfbd-108f-4c89-b027-1dbcf8e52cdd" />
 </Solution>

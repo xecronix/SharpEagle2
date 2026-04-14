@@ -132,8 +132,6 @@ public sealed class TemplateEngine
             ITemplateAction action = TemplateActions[p.Str];
             // set retval to the result of the action
             retval += action.Run(subTemplate, context) ?? "";
-            // consume the closing tag
-            tokens.Next();
             // set success to true
             success = true;
         }
