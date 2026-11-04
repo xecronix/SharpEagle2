@@ -3,8 +3,10 @@
 	
 	{@tableCreate:}    
 	
+	{@data 
 	INSERT INTO {=table_name:} 
-	{@data ({=fields:}) 
-	VALUES ({=values:});:}
+	({=fields:}) 
+	VALUES ({=values:});
+	:}
 :}
 

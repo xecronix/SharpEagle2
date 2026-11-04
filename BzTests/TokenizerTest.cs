@@ -51,6 +51,29 @@ namespace BzTests
             return true;
         }
 
+        private static bool ExpectTokenPosition(List<Token> tokens, int index, int expectedLine, int expectedColumn)
+        {
+            if (index < 0 || index >= tokens.Count)
+            {
+                BzEmitter.WriteLine($"Token index out of range: [{index}]");
+                return false;
+            }
+
+            if (tokens[index].LineNumber != expectedLine)
+            {
+                BzEmitter.WriteLine($"tokens[{index}].LineNumber != {expectedLine} : Actual [{tokens[index].LineNumber}]");
+                return false;
+            }
+
+            if (tokens[index].ColumnNumber != expectedColumn)
+            {
+                BzEmitter.WriteLine($"tokens[{index}].ColumnNumber != {expectedColumn} : Actual [{tokens[index].ColumnNumber}]");
+                return false;
+            }
+
+            return true;
+        }
+
         private static bool ExpectThrows(string template)
         {
             try
@@ -73,6 +96,52 @@ namespace BzTests
             if (tokens.Count != 1) { return false; }
             if (tokens[0].Str != template) { return false; }
             if (tokens[0].Type != TokenType.Text) { return false; }
+            if (!ExpectTokenPosition(tokens, 0, 1, 0)) { return false; }
+
+            return true;
+        }
+
+        private static bool Test_TokenLineAndColumnNumbers()
+        {
+            const string template = "A\n{@x:}\n{=y:}";
+            List<Token> tokens = MakeTokens(template);
+
+            if (!ExpectTokenCount(tokens, 8)) { return false; }
+            if (!ExpectToken(tokens, 0, TokenType.Text, "A\n")) { return false; }
+            if (!ExpectTokenPosition(tokens, 0, 1, 0)) { return false; }
+            if (!ExpectToken(tokens, 1, TokenType.OpenAction, "{@")) { return false; }
+            if (!ExpectTokenPosition(tokens, 1, 2, 0)) { return false; }
+            if (!ExpectToken(tokens, 2, TokenType.Key, "x")) { return false; }
+            if (!ExpectTokenPosition(tokens, 2, 2, 2)) { return false; }
+            if (!ExpectToken(tokens, 3, TokenType.CloseAction, ":}")) { return false; }
+            if (!ExpectTokenPosition(tokens, 3, 2, 3)) { return false; }
+            if (!ExpectToken(tokens, 4, TokenType.Text, "\n")) { return false; }
+            if (!ExpectTokenPosition(tokens, 4, 2, 5)) { return false; }
+            if (!ExpectToken(tokens, 5, TokenType.OpenSubstitution, "{=")) { return false; }
+            if (!ExpectTokenPosition(tokens, 5, 3, 0)) { return false; }
+            if (!ExpectToken(tokens, 6, TokenType.Key, "y")) { return false; }
+            if (!ExpectTokenPosition(tokens, 6, 3, 2)) { return false; }
+            if (!ExpectToken(tokens, 7, TokenType.CloseSubstitution, ":}")) { return false; }
+            if (!ExpectTokenPosition(tokens, 7, 3, 3)) { return false; }
+
+            return true;
+        }
+
+        private static bool Test_TokenizerCanBeReused()
+        {
+            Tokenizer tokenizer = new Tokenizer();
+
+            Cursor<char> firstCursor = new Cursor<char>("abc".ToCharArray());
+            List<Token> firstTokens = tokenizer.MakeTokens(firstCursor);
+            if (!ExpectTokenCount(firstTokens, 1)) { return false; }
+            if (!ExpectToken(firstTokens, 0, TokenType.Text, "abc")) { return false; }
+
+            Cursor<char> secondCursor = new Cursor<char>("{=x:}".ToCharArray());
+            List<Token> secondTokens = tokenizer.MakeTokens(secondCursor);
+            if (!ExpectTokenCount(secondTokens, 3)) { return false; }
+            if (!ExpectToken(secondTokens, 0, TokenType.OpenSubstitution, "{=")) { return false; }
+            if (!ExpectToken(secondTokens, 1, TokenType.Key, "x")) { return false; }
+            if (!ExpectToken(secondTokens, 2, TokenType.CloseSubstitution, ":}")) { return false; }
 
             return true;
         }
